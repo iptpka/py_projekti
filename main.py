@@ -15,7 +15,6 @@ class Curve_segment:
         self.start = start
         self.control = control
         self.stop = stop
-
         self.steps = steps
         self.color = color
         self.points = [self.start, self.control, self.stop]
@@ -33,8 +32,31 @@ class Curve_segment:
         for point in self.points:
             point.collider.center = (point.x, point.y)
 
+class Curve:
+    def __init__(self, segments):
+        self.segments = segments
 
-""" class Vector_object:
+    def draw(self, surface):
+        for segment in self.segments:
+            segment.draw(surface)
+
+    def draw_points(self, surface, x_offset=0, y_offset=0):
+        for segment in self.segments:
+            segment.draw_points(surface, x_offset, y_offset)
+
+    def update_point_colliders(self):
+        for segment in self.segments:
+            segment.update_point_colliders()
+    
+    def get_points(self):
+        points = []
+        for segment in self.segments:
+            for point in segment.points:
+                points.append(point)
+        return points
+
+
+class Vector_object:
     def __init__(self, width, height, position, colorkey=(0, 255, 255)):
         self.width = width
         self.height = height
@@ -54,7 +76,7 @@ class Curve_segment:
 
     def update_point_colliders(self):
         for obj in self.segments:
-            obj.update_point_colliders(self.x_offset, self.y_offset) """
+            obj.update_point_colliders(self.x_offset, self.y_offset)
 
 
 """ class Vector_object_group:
