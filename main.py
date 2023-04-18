@@ -5,36 +5,39 @@ import pygame.gfxdraw as gfx
 
 #A single point on a curve
 class Curve_point:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.collider = pg.Rect(x - 5, y - 5, 10, 10)
+    def __init__(self, position):
+        self.x = position[0]
+        self.y = position[1]
+        self.collider = pg.Rect(self.x - 5, self.y - 5, 10, 10)
+
+    def position(self):
+        return (self.x, self.y)
 
 
 #A single curve segment
 class Curve:
     def __init__(self, start, first_control, second_control, end, steps=100, color=(0, 0, 0)):
-        self.points = [Curve_point(*start), Curve_point(*first_control), Curve_point(*second_control), Curve_point(*end)]
+        self.points = [Curve_point(start), Curve_point(first_control), Curve_point(second_control), Curve_point(end)]
         self.steps = steps
         self.color = color
 
-    def draw(self, surface, x_offset=0, y_offset=0):
-        gfx.bezier(surface, [(p.x + x_offset, p.y + y_offset)
+    def draw(self, surface, position):
+        gfx.bezier(surface, [(p.x + position[0], p.y + position[1])
                    for p in self.points], self.steps, self.color)
 
-    def draw_controls(self, surface, x_offset=0, y_offset=0):
-        pg.draw.line(surface, (0, 0, 0), (self.points[0].x + x_offset, self.points[0].y + y_offset), (self.points[1].x + x_offset, self.points[1].y + y_offset))
-        pg.draw.line(surface, (0, 0, 0), (self.points[2].x + x_offset, self.points[2].y + y_offset), (self.points[3].x + x_offset, self.points[3].y + y_offset))
+    def draw_controls(self, surface, offset_position):
+        pg.draw.line(surface, (0, 0, 0), (self.points[0].x + offset_position[0], self.points[0].y + offset_position[1]), (self.points[1].x + offset_position[0], self.points[1].y + offset_position[1]))
+        pg.draw.line(surface, (0, 0, 0), (self.points[2].x + offset_position[0], self.points[2].y + offset_position[1]), (self.points[3].x + offset_position[0], self.points[3].y + offset_position[1]))
         for point in [self.points[0], self.points[3]]:
             pg.draw.circle(surface, (0, 0, 0), (point.x +
-                           x_offset, point.y + y_offset), 5)
+                           offset_position[0], point.y + offset_position[1]), 5)
         for point in [self.points[1], self.points[2]]:
             pg.draw.circle(surface, (0, 200, 0), (point.x +
-                           x_offset, point.y + y_offset), 5)
+                           offset_position[0], point.y + offset_position[1]), 5)
 
-    def update_point_colliders(self):
+    def update_point_colliders(self, offset_position):
         for point in self.points:
-            point.collider.center = (point.x, point.y)
+            point.collider.center = (point.x + offset_position[0], point.y + offset_position[1])
 
     def bounding_box(self):
         x_min = min([p.x for p in self.points])
@@ -51,18 +54,30 @@ class Path:
     def __init__(self, start_segment = None, position=(0, 0)):
         self.segments = [start_segment] if not start_segment is None else []
         self.position = position
-        
+        self.first_point = start_segment.get_points()[0] if not start_segment is None else None
+        self.last_point = start_segment.get_points()[3] if not start_segment is None else None
+
+    def add_segment_to_point(self, point):
+        if self.last_point is None:
+            print("No last point")
+            self.first_point = point
+            self.last_point = point
+        else:
+            print("Adding segment at point: ", point.position(), " to point: ", self.last_point.position(), " with control points: ", self.last_point.position(), point.position())
+            self.segments.append(Curve(self.last_point.position(), self.last_point.position(), point.position(), point.position()))
+            self.last_point = point
+
     def draw(self, surface):
         for segment in self.segments:
-            segment.draw(surface, self.position[0], self.position[1])
+            segment.draw(surface, self.position)
 
-    def draw_controls(self, surface, x_offset=0, y_offset=0):
+    def draw_controls(self, surface):
         for segment in self.segments:
-            segment.draw_controls(surface, x_offset, y_offset)
+            segment.draw_controls(surface, self.position)
 
     def update_point_colliders(self):
         for segment in self.segments:
-            segment.update_point_colliders()
+            segment.update_point_colliders(self.position)
     
     def get_points(self):
         points = []
@@ -120,11 +135,11 @@ vector_surface.set_colorkey((255, 255, 255))"""
 
 layer_1 = Vector_layer(1, 1, editor_viewport)
 test_curve = Curve((0, 0), (200, 200), (300, 100), (300, 0), 100, (0, 0, 0))
-layer_1.add_object(test_curve)
-selected_object = test_curve
+test_path = Path(test_curve, (100, 100))
+layer_1.add_object(test_path)
+selected_object = test_path
 selected_point = None
-
-
+selected_object.update_point_colliders()
 while running:
     # poll for events
     # pg.QUIT event means the user clicked X to close your window
@@ -138,8 +153,10 @@ while running:
                         selected_point = point
                         break
             if event.button == 3:
-                selected_object.points.append(Curve_point(
-                    event.pos[0] - viewport_x_offset, event.pos[1] - viewport_y_offset))
+                """selected_object.get_points().append(Curve_point(
+                    event.pos[0] - viewport_x_offset, event.pos[1] - viewport_y_offset))"""
+                selected_object.add_segment_to_point(Curve_point(
+                    (event.pos[0] - viewport_x_offset, event.pos[1] - viewport_y_offset)))
                 selected_object.update_point_colliders()
         if event.type == pg.MOUSEBUTTONUP:
             if event.button == 1:
@@ -147,17 +164,17 @@ while running:
 
     if selected_point != None:
         if pg.mouse.get_pos()[0] - viewport_x_offset < 0:
-            selected_point.x = 0
+            selected_point.x = 0 - selected_object.position[0]
         elif pg.mouse.get_pos()[0] - viewport_x_offset > editor_viewport.get_width():
-            selected_point.x = editor_viewport.get_width()
+            selected_point.x = editor_viewport.get_width() - selected_object.position[0]
         else:
-            selected_point.x = pg.mouse.get_pos()[0] - viewport_x_offset
+            selected_point.x = pg.mouse.get_pos()[0] - viewport_x_offset - selected_object.position[0]
         if pg.mouse.get_pos()[1] - viewport_y_offset < 0:
-            selected_point.y = 0
+            selected_point.y = 0 - selected_object.position[1]
         elif pg.mouse.get_pos()[1] - viewport_y_offset > editor_viewport.get_height():
-            selected_point.y = editor_viewport.get_height()
+            selected_point.y = editor_viewport.get_height() - selected_object.position[1]
         else:
-            selected_point.y = pg.mouse.get_pos()[1] - viewport_y_offset
+            selected_point.y = pg.mouse.get_pos()[1] - viewport_y_offset - selected_object.position[1]
         selected_object.update_point_colliders()
 
     # fill the screen with a color to wipe away anything from last frame
@@ -166,7 +183,7 @@ while running:
     editor_viewport.fill((255, 255, 255))
     layer_1.draw()
     editor_viewport.blit(layer_1.surface, (0, 0))
-    test_curve.draw_controls(editor_viewport)
+    test_path.draw_controls(editor_viewport)
     screen.blit(editor_viewport, (viewport_x_offset, viewport_y_offset))
 
     # flip() the display to put your work on screen
