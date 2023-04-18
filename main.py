@@ -6,13 +6,14 @@ import pygame.gfxdraw as gfx
 # A single point on a curve
 class Curve_point:
     def __init__(self, position, is_control=False):
-        self.x = position[0]
-        self.y = position[1]
+        position = pg.math.Vector2(position)
+        self.x = position.x
+        self.y = position.y
         self.is_control = is_control
         self.collider = pg.Rect(self.x - 5, self.y - 5, 10, 10)
 
-    def position(self):
-        return (self.x, self.y)
+    def get_position(self):
+        return pg.Vector2(self.x, self.y)
 
 
 # A single curve segment
@@ -25,23 +26,23 @@ class Curve:
         self.color = color
 
     def draw(self, surface, position):
-        gfx.bezier(surface, [(p.x + position[0], p.y + position[1])
+        gfx.bezier(surface, [(p.x + position.x, p.y + position.y)
                    for p in self.points], self.steps, self.color)
 
     def draw_controls(self, surface, offset_position):
-        pg.draw.line(surface, (0, 0, 0), (self.points[0].x + offset_position[0], self.points[0].y +
-                     offset_position[1]), (self.points[1].x + offset_position[0], self.points[1].y + offset_position[1]))
-        pg.draw.line(surface, (0, 0, 0), (self.points[2].x + offset_position[0], self.points[2].y +
-                     offset_position[1]), (self.points[3].x + offset_position[0], self.points[3].y + offset_position[1]))
+        pg.draw.line(surface, "darkgray", (self.points[0].x + offset_position.x, self.points[0].y +
+                     offset_position.y), (self.points[1].x + offset_position.x, self.points[1].y + offset_position.y))
+        pg.draw.line(surface, "darkgray", (self.points[2].x + offset_position.x, self.points[2].y +
+                     offset_position.y), (self.points[3].x + offset_position.x, self.points[3].y + offset_position.y))
         for point in self.points:
             color = "cadetblue" if point.is_control else "black"
             pg.draw.circle(surface, color, (point.x +
-                           offset_position[0], point.y + offset_position[1]), 5)
+                           offset_position.x, point.y + offset_position.y), 5)
 
     def update_point_colliders(self, offset_position):
         for point in self.points:
             point.collider.center = (
-                point.x + offset_position[0], point.y + offset_position[1])
+                point.x + offset_position.x, point.y + offset_position.y)
 
     def bounding_box(self):
         x_min = min([p.x for p in self.points])
@@ -52,6 +53,12 @@ class Curve:
 
     def get_points(self):
         return self.points
+    
+    def start_point(self):
+        return self.points[0]
+    
+    def end_point(self):
+        return self.points[3]
 
 # A composite of multiple curves
 
@@ -59,21 +66,30 @@ class Curve:
 class Path:
     def __init__(self, start_segment=None, position=(0, 0)):
         self.segments = [start_segment] if not start_segment is None else []
-        self.position = position
-        self.first_point = start_segment.get_points(
-        )[0] if not start_segment is None else None
-        self.last_point = start_segment.get_points(
-        )[3] if not start_segment is None else None
+        self.position = pg.Vector2(position)
+        self.first_point = start_segment.start_point() if not start_segment is None else None
+        self.last_point = start_segment.end_point() if not start_segment is None else None
 
     def add_segment_to_point(self, point):
         if self.last_point is None:
             self.first_point = point
             self.last_point = point
         else:
+            distance = self.last_point.get_position().distance_to(point.get_position())
             start = self.last_point
-            first_control = Curve_point(pg.math.Vector2(start.position()).move_towards(pg.math.Vector2(point.position()), 100))
-            self.segments.append(Curve(start, first_control, Curve_point(point.position()), point))
+            first_control = Curve_point(start.get_position().move_towards(point.get_position(), distance/3))
+            second_control = Curve_point(point.get_position().move_towards(start.get_position(), distance/3))
+            self.segments.append(Curve(start, first_control, second_control, point))
             self.last_point = point
+
+    def close_path(self):
+        if not self.first_point is None and not self.last_point is None:
+            distance = self.last_point.get_position().distance_to(self.first_point.get_position())
+            start = self.last_point
+            first_control = Curve_point(start.get_position().move_towards(self.first_point.get_position(), distance/3))
+            second_control = Curve_point(self.first_point.get_position().move_towards(start.get_position(), distance/3))
+            self.segments.append(Curve(start, first_control, second_control, self.first_point))
+            self.last_point = self.first_point
 
     def draw(self, surface):
         for segment in self.segments:
@@ -94,10 +110,12 @@ class Path:
                 points.append(point)
         return points
 
-    def bounding_box(self):
-        bounding_boxes = [segment.bounding_box() for segment in self.segments]
-        bounding_box = pg.rect.unionall(bounding_boxes)
-        return bounding_box
+    def large_bounding_box(self):
+        bounding_box = pg.Rect(0, 0, 0, 0)
+        for segment in self.segments:
+            bounding_box.union_ip(segment.bounding_box())
+        return bounding_box.scale_by(1.1)
+    
 
 
 # A layer of vector objects
@@ -142,7 +160,7 @@ def main():
     test_curve = Curve(*[Curve_point(position) for position in ((0, 0),
                     (150, 0), (150, 300), (300, 300))], 100, (0, 0, 0))
     for point in test_curve.get_points():
-        print(point.position())
+        print(point.get_position())
     test_path = Path(test_curve, (100, 100))
     layer_1.add_object(test_path)
     selected_object = test_path
@@ -157,16 +175,34 @@ def main():
             if event.type == pg.QUIT:
                 running = False
             if event.type == pg.MOUSEBUTTONDOWN and selected_point == None:
+                if event.button == 1 and selected_object != None:
+                    if not selected_object.large_bounding_box().collidepoint((event.pos[0] - viewport_x_offset - selected_object.position.x,
+                                                event.pos[1] - viewport_y_offset - selected_object.position.y)):
+                        selected_object = None
+                        break
+                if event.button == 1 and selected_object == None:
+                    for obj in layer_1.objects:
+                        if obj.large_bounding_box().collidepoint((event.pos[0] - viewport_x_offset - obj.position.x,
+                                                event.pos[1] - viewport_y_offset - obj.position.y)):
+                            selected_object = obj
+                            break
+                if selected_object == None:
+                    break
+                point_at_mouse = None
+                for point in selected_object.get_points():
+                    if point.collider.collidepoint((event.pos[0] - viewport_x_offset,
+                                                event.pos[1] - viewport_y_offset)):
+                        point_at_mouse = point
                 if event.button == 1:
-                    for point in selected_object.get_points():
-                        if point.collider.collidepoint((event.pos[0] - viewport_x_offset,
-                                                        event.pos[1] - viewport_y_offset)):
-                            selected_point = point
+                            selected_point = point_at_mouse
                             break
                 if event.button == 3:
-                    selected_object.add_segment_to_point(Curve_point(
-                        (event.pos[0] - viewport_x_offset - selected_object.position[0],
-                        event.pos[1] - viewport_y_offset - selected_object.position[1])))
+                    if point_at_mouse != None and point_at_mouse == selected_object.first_point:
+                        selected_object.close_path()
+                    else:
+                        selected_object.add_segment_to_point(Curve_point(
+                            (event.pos[0] - viewport_x_offset - selected_object.position.x,
+                            event.pos[1] - viewport_y_offset - selected_object.position.y)))
                     selected_object.update_point_colliders()
             if event.type == pg.MOUSEBUTTONUP:
                 if event.button == 1:
@@ -174,21 +210,21 @@ def main():
 
         if selected_point != None:
             if pg.mouse.get_pos()[0] - viewport_x_offset < 0:
-                selected_point.x = 0 - selected_object.position[0]
+                selected_point.x = 0 - selected_object.position.x
             elif pg.mouse.get_pos()[0] - viewport_x_offset > editor_viewport.get_width():
                 selected_point.x = editor_viewport.get_width() - \
-                    selected_object.position[0]
+                    selected_object.position.x
             else:
                 selected_point.x = pg.mouse.get_pos(
-                )[0] - viewport_x_offset - selected_object.position[0]
+                )[0] - viewport_x_offset - selected_object.position.x
             if pg.mouse.get_pos()[1] - viewport_y_offset < 0:
-                selected_point.y = 0 - selected_object.position[1]
+                selected_point.y = 0 - selected_object.position.y
             elif pg.mouse.get_pos()[1] - viewport_y_offset > editor_viewport.get_height():
                 selected_point.y = editor_viewport.get_height() - \
-                    selected_object.position[1]
+                    selected_object.position.y
             else:
                 selected_point.y = pg.mouse.get_pos(
-                )[1] - viewport_y_offset - selected_object.position[1]
+                )[1] - viewport_y_offset - selected_object.position.y
             selected_object.update_point_colliders()
 
         # fill the screen with a color to wipe away anything from last frame
@@ -197,9 +233,10 @@ def main():
         editor_viewport.fill((255, 255, 255))
         layer_1.draw()
         editor_viewport.blit(layer_1.surface, (0, 0))
-        test_path.draw_controls(editor_viewport)
+        if selected_object != None:
+            selected_object.draw_controls(editor_viewport)
         screen.blit(editor_viewport, (viewport_x_offset, viewport_y_offset))
-
+        #pg.draw.rect(screen, (0, 0, 0), selected_object.large_bounding_box().move(viewport_x_offset + selected_object.position.x, viewport_y_offset + selected_object.position.y), width=1)
         # flip() the display to put your work on screen
         pg.display.flip()
 
