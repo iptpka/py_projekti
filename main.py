@@ -168,6 +168,9 @@ def main():
     selected_object.update_point_colliders()
     for point in selected_object.get_points():
         print(point)
+
+    #state = None
+
     while running:
         # poll for events
         # pg.QUIT event means the user clicked X to close your window
@@ -186,24 +189,30 @@ def main():
                                                 event.pos[1] - viewport_y_offset - obj.position.y)):
                             selected_object = obj
                             break
-                if selected_object == None:
-                    break
-                point_at_mouse = None
-                for point in selected_object.get_points():
-                    if point.collider.collidepoint((event.pos[0] - viewport_x_offset,
-                                                event.pos[1] - viewport_y_offset)):
-                        point_at_mouse = point
-                if event.button == 1:
-                            selected_point = point_at_mouse
-                            break
-                if event.button == 3:
-                    if point_at_mouse != None and point_at_mouse == selected_object.first_point:
-                        selected_object.close_path()
-                    else:
-                        selected_object.add_segment_to_point(Curve_point(
-                            (event.pos[0] - viewport_x_offset - selected_object.position.x,
-                            event.pos[1] - viewport_y_offset - selected_object.position.y)))
-                    selected_object.update_point_colliders()
+
+                if selected_object != None: 
+                    point_at_mouse = None
+                    for point in selected_object.get_points():
+                        if point.collider.collidepoint((event.pos[0] - viewport_x_offset,
+                                                    event.pos[1] - viewport_y_offset)):
+                            point_at_mouse = point
+                    if event.button == 1:
+                                selected_point = point_at_mouse
+                                break
+                    if event.button == 3:
+                        if point_at_mouse != None and point_at_mouse == selected_object.first_point:
+                            selected_object.close_path()
+                        else:
+                            selected_object.add_segment_to_point(Curve_point(
+                                (event.pos[0] - viewport_x_offset - selected_object.position.x,
+                                event.pos[1] - viewport_y_offset - selected_object.position.y)))
+                        selected_object.update_point_colliders()
+                    if event.button == 3 and selected_object == None:
+                        pass
+                else:
+                    #logic for adding a new path when clicking somewhere with right button with no object selected
+                    pass
+
             if event.type == pg.MOUSEBUTTONUP:
                 if event.button == 1:
                     selected_point = None
@@ -231,10 +240,11 @@ def main():
         screen.fill("grey")
         layer_1.clear()
         editor_viewport.fill((255, 255, 255))
-        layer_1.draw()
-        editor_viewport.blit(layer_1.surface, (0, 0))
         if selected_object != None:
             selected_object.draw_controls(editor_viewport)
+        layer_1.draw()
+        editor_viewport.blit(layer_1.surface, (0, 0))
+
         screen.blit(editor_viewport, (viewport_x_offset, viewport_y_offset))
         #pg.draw.rect(screen, (0, 0, 0), selected_object.large_bounding_box().move(viewport_x_offset + selected_object.position.x, viewport_y_offset + selected_object.position.y), width=1)
         # flip() the display to put your work on screen
