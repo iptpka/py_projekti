@@ -3,12 +3,13 @@ import pygame.gfxdraw as gfx
 
 # A single point on a curve
 class Curve_point:
-    def __init__(self, position, is_control=False):
+    def __init__(self, position, is_control=False, controls=None):
         position = pg.math.Vector2(position)
         self.x = position.x
         self.y = position.y
         self.is_control = is_control
         self.collider = pg.Rect(self.x - 5, self.y - 5, 10, 10)
+        self.controls = controls if controls != None else [None, None] 
 
     def get_position(self):
         return pg.Vector2(self.x, self.y)
@@ -16,8 +17,10 @@ class Curve_point:
 # A single curve segment
 class Curve:
     def __init__(self, start, first_control, second_control, end, steps=100, color=(0, 0, 0)):
+        start.controls[1] = first_control
         first_control.is_control = True
         second_control.is_control = True
+        end.controls[0] = second_control
         self.points = [start, first_control, second_control, end]
         self.steps = steps
         self.color = color

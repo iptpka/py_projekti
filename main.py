@@ -84,6 +84,9 @@ def main():
                     selected_point = None
 
         if selected_point != None:
+
+            original_x = selected_point.x
+            original_y = selected_point.y
             if pg.mouse.get_pos()[0] - viewport_x_offset < 0:
                 selected_point.x = 0 - selected_object.position.x
             elif pg.mouse.get_pos()[0] - viewport_x_offset > editor_viewport.get_width():
@@ -100,6 +103,15 @@ def main():
             else:
                 selected_point.y = pg.mouse.get_pos(
                 )[1] - viewport_y_offset - selected_object.position.y
+            
+            if not selected_point.is_control:
+                if selected_point.controls[0] != None:
+                    selected_point.controls[0].x -= original_x - selected_point.x
+                    selected_point.controls[0].y -= original_y - selected_point.y
+                if selected_point.controls[1] != None:
+                    selected_point.controls[1].x -= original_x - selected_point.x
+                    selected_point.controls[1].y -= original_y - selected_point.y
+
             selected_object.update_point_colliders()
 
         # fill the screen with a color to wipe away anything from last frame
