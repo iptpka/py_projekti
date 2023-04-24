@@ -47,6 +47,7 @@ def main():
             if event.type == pg.QUIT:
                 running = False
             if event.type == pg.MOUSEBUTTONDOWN and selected_point == None:
+                print("click at: " + str(event.pos))
                 if event.button == 1:
                     selected_object = None
                     for obj in selected_layer.objects:
@@ -54,7 +55,6 @@ def main():
                                                 event.pos[1] - viewport_y_offset - obj.position.y)):
                             selected_object = obj
                             break
-
                 if selected_object != None: 
                     point_at_mouse = None
                     for point in selected_object.get_points():
@@ -65,6 +65,8 @@ def main():
                                 selected_point = point_at_mouse
                                 break
                     if event.button == 3:
+                        if point_at_mouse != None and selected_object.first_point == None:
+                            break
                         if point_at_mouse != None and point_at_mouse == selected_object.first_point:
                             selected_object.close_path()
                         else:
@@ -72,13 +74,12 @@ def main():
                                 (event.pos[0] - viewport_x_offset - selected_object.position.x,
                                 event.pos[1] - viewport_y_offset - selected_object.position.y)))
                         selected_object.update_point_colliders()
-                    if event.button == 3 and selected_object == None:
-                        pass
                 else:
                     #logic for adding a new path when clicking somewhere with right button with no object selected
                     #FIX THIS
                     if event.button == 3:
                         new_path = (Path(position=(event.pos[0] - viewport_x_offset, event.pos[1] - viewport_y_offset)))
+                        print(new_path.position)
                         selected_layer.add_object(new_path)
                         selected_object = new_path
 

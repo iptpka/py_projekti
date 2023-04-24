@@ -14,7 +14,10 @@ class Path:
         if self.closed:
             return
         if self.last_point is None:
-            self.first_point = curves.Curve_point(self.position)
+            print("adding segment to point for empty path. Point at: " + str(point.get_position()))
+            print("creating first point at: ", self.position)
+            self.first_point = curves.Curve_point((0, 0))
+            print("first point created at: ", self.first_point.get_position())
             self.last_point = self.first_point
         distance = self.last_point.get_position().distance_to(point.get_position())
         start = self.last_point
@@ -24,6 +27,7 @@ class Path:
         point.controls[0] = second_control
         self.segments.append(curves.Curve(start, first_control, second_control, point))
         self.last_point = point
+        print("First point: ", self.first_point.get_position(), "Last point:", self.last_point.get_position())
 
     def close_path(self):
         if not self.first_point is None and not self.last_point is None and not self.closed:
@@ -50,6 +54,8 @@ class Path:
             segment.update_point_colliders(self.position)
 
     def get_points(self):
+        if len(self.segments) == 0:
+            return [curves.Curve_point(self.position)]
         points = []
         for segment in self.segments:
             for point in segment.points:
