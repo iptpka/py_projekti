@@ -29,15 +29,17 @@ class Curve:
         gfx.bezier(surface, [(p.x + position.x, p.y + position.y)
                    for p in self.points], self.steps, self.color)
 
-    def draw_controls(self, surface, offset_position):
-        pg.draw.line(surface, "darkgray", (self.points[0].x + offset_position.x, self.points[0].y +
-                     offset_position.y), (self.points[1].x + offset_position.x, self.points[1].y + offset_position.y))
-        pg.draw.line(surface, "darkgray", (self.points[2].x + offset_position.x, self.points[2].y +
-                     offset_position.y), (self.points[3].x + offset_position.x, self.points[3].y + offset_position.y))
+    def draw_controls(self, surface, position):
+        pg.draw.line(surface, "darkgray", (self.points[0].x + position.x, self.points[0].y +
+                    position.y), (self.points[1].x + position.x, self.points[1].y + position.y))
+        pg.draw.line(surface, "darkgray", (self.points[2].x + position.x, self.points[2].y +
+                    position.y), (self.points[3].x + position.x, self.points[3].y + position.y))
         for point in self.points:
+            if point.x + position.x < 0 or point.x + position.x > surface.get_width() or point.y + position.y < 0 or point.y + position.y > surface.get_height():
+                continue
             color = "cadetblue" if point.is_control else "black"
             pg.draw.circle(surface, color, (point.x +
-                           offset_position.x, point.y + offset_position.y), 5)
+                           position.x, point.y + position.y), 5)
 
     def update_point_colliders(self, offset_position):
         for point in self.points:

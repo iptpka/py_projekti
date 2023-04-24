@@ -32,6 +32,8 @@ def main():
     selected_object = test_path
     selected_point = None
     selected_object.update_point_colliders()
+    selected_layer = layer_1
+    layers = [layer_1]
     for point in selected_object.get_points():
         print(point)
 
@@ -41,16 +43,13 @@ def main():
         # poll for events
         # pg.QUIT event means the user clicked X to close your window
         for event in pg.event.get():
+
             if event.type == pg.QUIT:
                 running = False
             if event.type == pg.MOUSEBUTTONDOWN and selected_point == None:
-                if event.button == 1 and selected_object != None:
-                    if not selected_object.large_bounding_box().collidepoint((event.pos[0] - viewport_x_offset - selected_object.position.x,
-                                                event.pos[1] - viewport_y_offset - selected_object.position.y)):
-                        selected_object = None
-                        break
-                if event.button == 1 and selected_object == None:
-                    for obj in layer_1.objects:
+                if event.button == 1:
+                    selected_object = None
+                    for obj in selected_layer.objects:
                         if obj.large_bounding_box().collidepoint((event.pos[0] - viewport_x_offset - obj.position.x,
                                                 event.pos[1] - viewport_y_offset - obj.position.y)):
                             selected_object = obj
@@ -77,7 +76,11 @@ def main():
                         pass
                 else:
                     #logic for adding a new path when clicking somewhere with right button with no object selected
-                    pass
+                    #FIX THIS
+                    if event.button == 3:
+                        new_path = (Path(position=(event.pos[0] - viewport_x_offset, event.pos[1] - viewport_y_offset)))
+                        selected_layer.add_object(new_path)
+                        selected_object = new_path
 
             if event.type == pg.MOUSEBUTTONUP:
                 if event.button == 1:
