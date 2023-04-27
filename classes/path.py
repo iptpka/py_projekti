@@ -71,4 +71,4 @@ class Path:
         bounding_box = pg.Rect(self.segments[0].large_bounding_box())
         for segment in self.segments[1:]:
             bounding_box.union_ip(segment.large_bounding_box())
-        return bounding_box
+        return bounding_box.scale_by(1.05)

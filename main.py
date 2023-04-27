@@ -10,23 +10,23 @@ def main():
     # pyg setup
     pg.init()
     
-    screen = pg.display.set_mode((1280, 720))
+    screen = pg.display.set_mode((1280, 976))
     clock = pg.time.Clock()
     running = True
     dt = 0
 
-    viewport_width_percent = 0.8
+    viewport_width_percent = 0.98
     viewport_height_percent = 0.9
     editor_viewport = pg.Surface((screen.get_width(
     )*viewport_width_percent, screen.get_height()*viewport_height_percent))
     editor_viewport.set_colorkey((0, 255, 255))
-    viewport_x_offset = screen.get_width() * (1 - viewport_width_percent) / 4
-    viewport_y_offset = screen.get_height() * (1 - viewport_height_percent) / 2
+    viewport_x_offset = screen.get_width() * (1 - viewport_width_percent) / 2
+    viewport_y_offset = screen.get_height() * (1 - viewport_height_percent) / 4
 
 
     layer_1 = VectorLayer(1, 1, editor_viewport)
     test_curve = Curve(*[CurvePoint(position) for position in ((0, 0),
-                    (150, 0), (150, 300), (300, 300))], 2, (0, 0, 0))
+                    (150, 0), (150, 300), (300, 300))], 20, (0, 0, 0))
     for point in test_curve.get_points():
         print(point.get_position())
     test_path = Path(test_curve, (100, 100))
@@ -40,7 +40,7 @@ def main():
         print(point)
 
     buttons = []
-    buttons.append(Button(0, 0, 100, 50, 'Test', lambda: print('test')))
+    buttons.append(Button(1000, 0, 100, 50, 'Test', lambda: print('test')))
     
     #state = None
 
@@ -133,10 +133,14 @@ def main():
         for layer in layers:
             layer.draw()
         editor_viewport.blit(layer_1.surface, (0, 0))
+
+        screen.blit(editor_viewport, (viewport_x_offset, viewport_y_offset))
         for button in buttons:
             button.process_state()
-            editor_viewport.blit(button.button_surface, (button.x, button.y))
-        screen.blit(editor_viewport, (viewport_x_offset, viewport_y_offset))
+            screen.blit(button.button_surface, (button.x, button.y))
+
+        pg.draw.line(screen, (80, 100, 150), (viewport_x_offset + editor_viewport.get_width() + 2, viewport_y_offset + 4), (viewport_x_offset + editor_viewport.get_width(), viewport_y_offset + editor_viewport.get_height() + 2), 4)
+        pg.draw.line(screen, (80, 100, 150), (viewport_x_offset + 4 , viewport_y_offset + editor_viewport.get_height() + 2), (viewport_x_offset + editor_viewport.get_width() + 2, viewport_y_offset + editor_viewport.get_height() + 2), 4)
         # flip() the display to put your work on screen
         pg.display.flip()
 
