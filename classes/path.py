@@ -16,13 +16,13 @@ class Path:
         if self.last_point is None:
             print("adding segment to point for empty path. Point at: " + str(point.get_position()))
             print("creating first point at: ", self.position)
-            self.first_point = curves.Curve_point((0, 0))
+            self.first_point = curves.CurvePoint((0, 0))
             print("first point created at: ", self.first_point.get_position())
             self.last_point = self.first_point
         distance = self.last_point.get_position().distance_to(point.get_position())
         start = self.last_point
-        first_control = curves.Curve_point(start.get_position().move_towards(point.get_position(), distance/3))
-        second_control = curves.Curve_point(point.get_position().move_towards(start.get_position(), distance/3))
+        first_control = curves.CurvePoint(start.get_position().move_towards(point.get_position(), distance/3))
+        second_control = curves.CurvePoint(point.get_position().move_towards(start.get_position(), distance/3))
         start.controls[1] = first_control
         point.controls[0] = second_control
         self.segments.append(curves.Curve(start, first_control, second_control, point))
@@ -33,8 +33,8 @@ class Path:
         if not self.first_point is None and not self.last_point is None and not self.closed:
             distance = self.last_point.get_position().distance_to(self.first_point.get_position())
             start = self.last_point
-            first_control = curves.Curve_point(start.get_position().move_towards(self.first_point.get_position(), distance/3))
-            second_control = curves.Curve_point(self.first_point.get_position().move_towards(start.get_position(), distance/3))
+            first_control = curves.CurvePoint(start.get_position().move_towards(self.first_point.get_position(), distance/3))
+            second_control = curves.CurvePoint(self.first_point.get_position().move_towards(start.get_position(), distance/3))
             self.segments.append(curves.Curve(start, first_control, second_control, self.first_point))
             self.last_point = self.first_point
             self.closed = True
@@ -55,15 +55,20 @@ class Path:
 
     def get_points(self):
         if len(self.segments) == 0:
-            return [curves.Curve_point(self.position)]
+            return [curves.CurvePoint(self.position)]
         points = []
         for segment in self.segments:
             for point in segment.points:
                 points.append(point)
         return points
 
+    def draw_bounding_box(self, surface):
+        pg.draw.rect(surface, (0, 0, 0), self.large_bounding_box().move(self.position.x, self.position.y), width=1)
+
     def large_bounding_box(self):
-        bounding_box = pg.Rect(0, 0, 0, 0)
-        for segment in self.segments:
-            bounding_box.union_ip(segment.bounding_box())
-        return bounding_box.scale_by(1.1)
+        if len(self.segments) == 0:
+            return pg.Rect(-10, -10, 20, 20)
+        bounding_box = pg.Rect(self.segments[0].large_bounding_box())
+        for segment in self.segments[1:]:
+            bounding_box.union_ip(segment.large_bounding_box())
+        return bounding_box

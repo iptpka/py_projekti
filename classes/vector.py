@@ -1,7 +1,7 @@
 import pygame as pg
 
 # A layer of vector objects
-class Vector_layer:
+class VectorLayer:
     def __init__(self, id, depth, viewport, colorkey=(0, 255, 255)):
         self.id = id
         self.depth = depth

@@ -2,7 +2,7 @@ import pygame as pg
 import pygame.gfxdraw as gfx
 
 # A single point on a curve
-class Curve_point:
+class CurvePoint:
     def __init__(self, position, is_control=False, controls=None):
         position = pg.math.Vector2(position)
         self.x = position.x
@@ -46,11 +46,18 @@ class Curve:
             point.collider.center = (
                 point.x + offset_position.x, point.y + offset_position.y)
 
-    def bounding_box(self):
+    def large_bounding_box(self):
         x_min = min([p.x for p in self.points])
         x_max = max([p.x for p in self.points])
         y_min = min([p.y for p in self.points])
         y_max = max([p.y for p in self.points])
+        return pg.Rect(x_min, y_min, x_max - x_min, y_max - y_min)
+    
+    def small_bounding_box(self):
+        x_min = min([p.x for p in self.points if not p.is_control])
+        x_max = max([p.x for p in self.points if not p.is_control])
+        y_min = min([p.y for p in self.points if not p.is_control])
+        y_max = max([p.y for p in self.points if not p.is_control])
         return pg.Rect(x_min, y_min, x_max - x_min, y_max - y_min)
 
     def get_points(self):
