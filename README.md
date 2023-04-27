@@ -16,5 +16,8 @@
 $ gh repo clone iptpka/py_projekti
 ```
 
+## Class UML Diagram
+![A class diagram drawn using diagrams.net](https://github.com/iptpka/py_projekti/blob/master/class_uml.png)
+
 ## License
 This repository is released under the [CC0 License](LICENSE)
