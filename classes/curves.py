@@ -8,8 +8,9 @@ class CurvePoint:
         self.x = position.x
         self.y = position.y
         self.is_control = is_control
-        self.collider = pg.Rect(self.x - 5, self.y - 5, 10, 10)
-        self.controls = controls if controls != None else [None, None] 
+        self.collider = pg.Rect(self.x - 6, self.y - 6, 12, 12)
+        self.controls = controls if controls != None else [None, None]
+        self.is_selected = False
 
     def get_position(self):
         return pg.Vector2(self.x, self.y)
@@ -37,7 +38,12 @@ class Curve:
         for point in self.points:
             if point.x + position.x < 0 or point.x + position.x > surface.get_width() or point.y + position.y < 0 or point.y + position.y > surface.get_height():
                 continue
-            color = "cadetblue" if point.is_control else "black"
+            color = 'black'
+            if point.is_control:
+                color = 'cadetblue'
+            elif point.is_selected:
+                color = 'blue2'
+
             pg.draw.circle(surface, color, (point.x +
                            position.x, point.y + position.y), 5)
 

@@ -3,7 +3,16 @@ import pygame
 
 
 class Button():
-    def __init__(self, x, y, width, height, buttonText='Button', onclickFunction=None, onPress=None):
+    
+    default_colors = {
+        'normal': 'white',
+        'hover': 'bisque',
+        'pressed': 'salmon1',
+    }
+    
+    layers = []
+    
+    def __init__(self, x, y, width, height, buttonText='Button', onclickFunction=None, onPress=None, colors=None):
         pygame.font.init()
         font = pygame.font.SysFont('Arial', 20)
         self.x = x
@@ -14,12 +23,7 @@ class Button():
         self.on_press = onPress
         self.already_pressed = False
 
-        self.fill_colors = {
-            'normal': '#ffffff',
-            'hover': '#666666',
-            'pressed': '#333333',
-        }
-
+        self.fill_colors = Button.default_colors if colors == None else colors
         self.button_surface = pygame.Surface((self.width, self.height))
         self.button_rect = pygame.Rect(self.x, self.y, self.width, self.height)
         self.button_text = font.render(buttonText, True, (20, 20, 20))

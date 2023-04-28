@@ -9,15 +9,13 @@ class Path:
         self.first_point = start_segment.start_point() if not start_segment is None else None
         self.last_point = start_segment.end_point() if not start_segment is None else None
         self.closed = False
+        self.selected_point = None
 
     def add_segment_to_point(self, point):
         if self.closed:
             return
         if self.last_point is None:
-            print("adding segment to point for empty path. Point at: " + str(point.get_position()))
-            print("creating first point at: ", self.position)
             self.first_point = curves.CurvePoint((0, 0))
-            print("first point created at: ", self.first_point.get_position())
             self.last_point = self.first_point
         distance = self.last_point.get_position().distance_to(point.get_position())
         start = self.last_point
@@ -27,7 +25,6 @@ class Path:
         point.controls[0] = second_control
         self.segments.append(curves.Curve(start, first_control, second_control, point))
         self.last_point = point
-        print("First point: ", self.first_point.get_position(), "Last point:", self.last_point.get_position())
 
     def close_path(self):
         if not self.first_point is None and not self.last_point is None and not self.closed:

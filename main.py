@@ -5,6 +5,60 @@ from classes.path import Path
 from classes.vector import VectorLayer
 from classes.button import Button
 
+def move_point(point, object, viewport, x_offset, y_offset):
+    original_x = point.x
+    original_y = point.y
+    if pg.mouse.get_pos()[0] - x_offset < 0:
+        point.x = 0 - object.position.x
+    elif pg.mouse.get_pos()[0] - x_offset > viewport.get_width():
+        point.x = viewport.get_width() - object.position.x
+    else:
+        point.x = pg.mouse.get_pos()[0] - x_offset - object.position.x
+    if pg.mouse.get_pos()[1] - y_offset < 0:
+        point.y = 0 - object.position.y
+    elif pg.mouse.get_pos()[1] - y_offset > viewport.get_height():
+        point.y = viewport.get_height() - object.position.y
+    else:
+        point.y = pg.mouse.get_pos()[1] - y_offset - object.position.y
+    
+    #keep controls in place relative to point
+    if not point.is_control:
+        if point.controls[0] != None:
+            point.controls[0].x -= original_x - point.x
+            point.controls[0].y -= original_y - point.y
+        if point.controls[1] != None:
+            point.controls[1].x -= original_x - point.x
+            point.controls[1].y -= original_y - point.y
+
+    object.update_point_colliders()
+
+
+def get_object_at_point(point, layer, previous_object):
+    selected_object = None
+    for obj in layer.objects:
+        if obj.large_bounding_box().collidepoint((point.x - obj.position.x, point.y - obj.position.y)):
+            if obj == previous_object:
+                selected_object = previous_object
+            if obj != previous_object:
+                return obj
+    return selected_object
+
+
+def get_curve_point_at_point(point, object):
+    for curve_point in object.get_points():
+        if curve_point.collider.collidepoint((point.x, point.y)):
+            return curve_point
+    return None
+
+def draw_drop_shadow(surface, object, color, offset, width=4):
+    pg.draw.line(surface, color,
+                     (offset.x + object.get_width() + width/3, offset.y + width),
+                     (offset.x + object.get_width() + width/3, offset.y + object.get_height() + width -1), width)
+    pg.draw.line(surface, color,
+                     (offset.x + width, offset.y + object.get_height() + width/2 -1),
+                     (offset.x + object.get_width() + width/2, offset.y + object.get_height() + width/2 -1), width)
+
+
 
 def main():
     # pyg setup
@@ -13,141 +67,113 @@ def main():
     screen = pg.display.set_mode((1280, 976))
     clock = pg.time.Clock()
     running = True
-    dt = 0
-
-    viewport_width_percent = 0.98
-    viewport_height_percent = 0.9
-    editor_viewport = pg.Surface((screen.get_width(
-    )*viewport_width_percent, screen.get_height()*viewport_height_percent))
+    
+    colors = {
+        'background': 'mistyrose2',
+        'viewport': 'white',
+        'drop_shadow': 'skyblue2'
+    }
+    
+    viewport_width_percent = 0.9
+    viewport_height_percent = 0.8
+    editor_viewport = pg.Surface((screen.get_width()*viewport_width_percent,
+                                  screen.get_height()*viewport_height_percent))
     editor_viewport.set_colorkey((0, 255, 255))
     viewport_x_offset = screen.get_width() * (1 - viewport_width_percent) / 2
-    viewport_y_offset = screen.get_height() * (1 - viewport_height_percent) / 4
+    viewport_y_offset = screen.get_height() * (1 - viewport_height_percent) / 6
 
+    layers = []
+    layer1 = VectorLayer(1, 1, editor_viewport)
+    layers.append(layer1)
 
-    layer_1 = VectorLayer(1, 1, editor_viewport)
     test_curve = Curve(*[CurvePoint(position) for position in ((0, 0),
                     (150, 0), (150, 300), (300, 300))], 20, (0, 0, 0))
-    for point in test_curve.get_points():
-        print(point.get_position())
+
     test_path = Path(test_curve, (100, 100))
-    layer_1.add_object(test_path)
+    
+    layer1.add_object(test_path)
     selected_object = test_path
     selected_point = None
     selected_object.update_point_colliders()
-    selected_layer = layer_1
-    layers = [layer_1]
-    for point in selected_object.get_points():
-        print(point)
+    selected_layer = layer1
+ 
 
+    Button.layers = layers
     buttons = []
-    buttons.append(Button(1000, 0, 100, 50, 'Test', lambda: print('test')))
-    
-    #state = None
+    buttons.append(Button(viewport_x_offset, editor_viewport.get_height() + viewport_y_offset*2, 100, 50, 'clear', lambda: layer1.objects.clear()))
 
     while running:
-        # poll for events
-        # pg.QUIT event means the user clicked X to close your window
+        
         for event in pg.event.get():
-
             if event.type == pg.QUIT:
                 running = False
-            if event.type == pg.MOUSEBUTTONDOWN and selected_point == None:
-                print("click at: " + str(event.pos))
+                return
+            if event.type == pg.MOUSEBUTTONUP:
                 if event.button == 1:
-                    selected_object = None
-                    for obj in selected_layer.objects:
-                        if obj.large_bounding_box().collidepoint((event.pos[0] - viewport_x_offset - obj.position.x,
-                                                event.pos[1] - viewport_y_offset - obj.position.y)):
-                            selected_object = obj
-                            break
+                    selected_point = None
+                break
+            if event.type == pg.MOUSEBUTTONDOWN and selected_point == None:
+                viewport_event_position = pg.Vector2(event.pos[0] - viewport_x_offset, event.pos[1] - viewport_y_offset)
+                
                 if selected_object != None: 
-                    point_at_mouse = None
-                    for point in selected_object.get_points():
-                        if point.collider.collidepoint((event.pos[0] - viewport_x_offset,
-                                                    event.pos[1] - viewport_y_offset)):
-                            point_at_mouse = point
-                    if event.button == 1:
-                                selected_point = point_at_mouse
-                                break
-                    if event.button == 3:
+                    point_at_mouse = get_curve_point_at_point(viewport_event_position, selected_object)
+                    if event.button == 1: 
+                        selected_point = point_at_mouse
+                    elif event.button == 3:
+                        #adding a new curve segment to current path when clicking somewhere with right button
                         if point_at_mouse != None and selected_object.first_point == None:
                             break
                         if point_at_mouse != None and point_at_mouse == selected_object.first_point:
                             selected_object.close_path()
                         else:
                             selected_object.add_segment_to_point(CurvePoint(
-                                (event.pos[0] - viewport_x_offset - selected_object.position.x,
-                                event.pos[1] - viewport_y_offset - selected_object.position.y)))
+                                (viewport_event_position.x - selected_object.position.x,
+                                viewport_event_position.y - selected_object.position.y)))
                         selected_object.update_point_colliders()
                 else:
-                    #logic for adding a new path when clicking somewhere with right button with no object selected
-                    #FIX THIS
+                    #adding a new path when clicking somewhere with right button with no object selected
                     if event.button == 3:
-                        new_path = (Path(position=(event.pos[0] - viewport_x_offset, event.pos[1] - viewport_y_offset)))
+                        new_path = (Path(position=viewport_event_position))
                         print(new_path.position)
                         selected_layer.add_object(new_path)
                         selected_object = new_path
-
-            if event.type == pg.MOUSEBUTTONUP:
-                if event.button == 1:
-                    selected_point = None
-
+                if event.button == 1 and selected_point == None:
+                    selected_object = get_object_at_point(viewport_event_position, selected_layer, selected_object)
         if selected_point != None:
-            original_x = selected_point.x
-            original_y = selected_point.y
-            if pg.mouse.get_pos()[0] - viewport_x_offset < 0:
-                selected_point.x = 0 - selected_object.position.x
-            elif pg.mouse.get_pos()[0] - viewport_x_offset > editor_viewport.get_width():
-                selected_point.x = editor_viewport.get_width() - \
-                    selected_object.position.x
-            else:
-                selected_point.x = pg.mouse.get_pos(
-                )[0] - viewport_x_offset - selected_object.position.x
-            if pg.mouse.get_pos()[1] - viewport_y_offset < 0:
-                selected_point.y = 0 - selected_object.position.y
-            elif pg.mouse.get_pos()[1] - viewport_y_offset > editor_viewport.get_height():
-                selected_point.y = editor_viewport.get_height() - \
-                    selected_object.position.y
-            else:
-                selected_point.y = pg.mouse.get_pos(
-                )[1] - viewport_y_offset - selected_object.position.y
-            
-            if not selected_point.is_control:
-                if selected_point.controls[0] != None:
-                    selected_point.controls[0].x -= original_x - selected_point.x
-                    selected_point.controls[0].y -= original_y - selected_point.y
-                if selected_point.controls[1] != None:
-                    selected_point.controls[1].x -= original_x - selected_point.x
-                    selected_point.controls[1].y -= original_y - selected_point.y
-            selected_object.update_point_colliders()
+            #moving a point to the mouse position
+            move_point(selected_point, selected_object, editor_viewport, viewport_x_offset, viewport_y_offset)
 
-        # fill the screen with a color to wipe away anything from last frame
-        screen.fill("grey")
-        layer_1.clear()
-        editor_viewport.fill((255, 255, 255))
+        screen.fill(colors['background'])
+        layer1.clear()
+        editor_viewport.fill(colors['viewport'])
 
-        if selected_object != None:
-            selected_object.draw_controls(editor_viewport)
-            #selected_object.draw_bounding_box(editor_viewport)
+
 
         for layer in layers:
             layer.draw()
-        editor_viewport.blit(layer_1.surface, (0, 0))
 
+        editor_viewport.blit(layer1.surface, (0, 0))
+        
+        if selected_object != None:
+            selected_object.draw_controls(editor_viewport)
+            #selected_object.draw_bounding_box(editor_viewport)
+            
         screen.blit(editor_viewport, (viewport_x_offset, viewport_y_offset))
+        
         for button in buttons:
             button.process_state()
             screen.blit(button.button_surface, (button.x, button.y))
+            draw_drop_shadow(screen, button.button_surface, colors['drop_shadow'], pg.Vector2(button.x, button.y), 8)
 
-        pg.draw.line(screen, (80, 100, 150), (viewport_x_offset + editor_viewport.get_width() + 2, viewport_y_offset + 4), (viewport_x_offset + editor_viewport.get_width(), viewport_y_offset + editor_viewport.get_height() + 2), 4)
-        pg.draw.line(screen, (80, 100, 150), (viewport_x_offset + 4 , viewport_y_offset + editor_viewport.get_height() + 2), (viewport_x_offset + editor_viewport.get_width() + 2, viewport_y_offset + editor_viewport.get_height() + 2), 4)
+        draw_drop_shadow(screen, editor_viewport, colors['drop_shadow'], pg.Vector2(viewport_x_offset, viewport_y_offset), 10)
+
         # flip() the display to put your work on screen
         pg.display.flip()
 
         # limits FPS to 60
         # dt is delta time in seconds since last frame, used for framerate-
         # independent physics.
-        dt = clock.tick(60) / 1000
+        clock.tick(60) / 1000
 
     pg.quit()
 
