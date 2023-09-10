@@ -19,4 +19,4 @@ class VectorLayer:
             obj.draw(self.surface)
 
     def clear(self):
-        self.surface.fill((0, 255, 255))
+        self.surface.fill(self.surface.get_colorkey())

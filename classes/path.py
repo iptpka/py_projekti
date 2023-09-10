@@ -60,7 +60,7 @@ class Path:
         return points
 
     def draw_bounding_box(self, surface):
-        pg.draw.rect(surface, (0, 0, 0), self.large_bounding_box().move(self.position.x, self.position.y), width=1)
+        pg.draw.rect(surface, 'black', self.large_bounding_box().move(self.position.x, self.position.y), width=1)
 
     def large_bounding_box(self):
         if len(self.segments) == 0:

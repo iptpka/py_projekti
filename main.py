@@ -5,21 +5,26 @@ from classes.path import Path
 from classes.vector import VectorLayer
 from classes.button import Button
 
-def move_point(point, object, viewport, x_offset, y_offset):
+global editing
+editing = True
+global moving
+moving = False
+
+def move_point(point, object, viewport, x_offset, y_offset, position):
     original_x = point.x
     original_y = point.y
-    if pg.mouse.get_pos()[0] - x_offset < 0:
+    if position.x - x_offset < 0:
         point.x = 0 - object.position.x
-    elif pg.mouse.get_pos()[0] - x_offset > viewport.get_width():
+    elif position.x - x_offset > viewport.get_width():
         point.x = viewport.get_width() - object.position.x
     else:
-        point.x = pg.mouse.get_pos()[0] - x_offset - object.position.x
-    if pg.mouse.get_pos()[1] - y_offset < 0:
+        point.x = position.x - x_offset - object.position.x
+    if position.y - y_offset < 0:
         point.y = 0 - object.position.y
-    elif pg.mouse.get_pos()[1] - y_offset > viewport.get_height():
+    elif position.y - y_offset > viewport.get_height():
         point.y = viewport.get_height() - object.position.y
     else:
-        point.y = pg.mouse.get_pos()[1] - y_offset - object.position.y
+        point.y = position.y - y_offset - object.position.y
     
     #keep controls in place relative to point
     if not point.is_control:
@@ -30,6 +35,12 @@ def move_point(point, object, viewport, x_offset, y_offset):
             point.controls[1].x -= original_x - point.x
             point.controls[1].y -= original_y - point.y
 
+    object.update_point_colliders()
+
+
+def move_object(object, viewport, x_offset, y_offset, position):
+    object.position.x = position.x - x_offset - object.large_bounding_box().width/2
+    object.position.y = position.y - y_offset - object.large_bounding_box().height/2
     object.update_point_colliders()
 
 
@@ -50,6 +61,7 @@ def get_curve_point_at_point(point, object):
             return curve_point
     return None
 
+
 def draw_drop_shadow(surface, object, color, offset, width=4):
     pg.draw.line(surface, color,
                      (offset.x + object.get_width() + width/3, offset.y + width),
@@ -58,7 +70,17 @@ def draw_drop_shadow(surface, object, color, offset, width=4):
                      (offset.x + width, offset.y + object.get_height() + width/2 -1),
                      (offset.x + object.get_width() + width/2, offset.y + object.get_height() + width/2 -1), width)
 
+def set_editing():
+    global editing
+    global moving
+    editing = True
+    moving = False
 
+def set_moving():
+    global moving
+    global editing
+    moving = True
+    editing = False
 
 def main():
     # pyg setup
@@ -100,7 +122,12 @@ def main():
 
     Button.layers = layers
     buttons = []
-    buttons.append(Button(viewport_x_offset, editor_viewport.get_height() + viewport_y_offset*2, 100, 50, 'clear', lambda: layer1.objects.clear()))
+    button_width = 100
+    button_height = 50
+    button_margin = 10
+    buttons.append(Button(viewport_x_offset, editor_viewport.get_height() + viewport_y_offset*2, button_width, button_height, 'clear', lambda: layer1.objects.clear()))
+    buttons.append(Button(viewport_x_offset + button_width + button_margin, editor_viewport.get_height() + viewport_y_offset*2, button_width, button_height, 'move', lambda: set_moving()))
+    buttons.append(Button(viewport_x_offset + button_width*2 + button_margin*2, editor_viewport.get_height() + viewport_y_offset*2, button_width, button_height, 'edit', lambda: set_editing()))
 
     while running:
         
@@ -114,8 +141,9 @@ def main():
                 break
             if event.type == pg.MOUSEBUTTONDOWN and selected_point == None:
                 viewport_event_position = pg.Vector2(event.pos[0] - viewport_x_offset, event.pos[1] - viewport_y_offset)
-                
-                if selected_object != None: 
+                if viewport_event_position.x < 0 or viewport_event_position.x > editor_viewport.get_width() or viewport_event_position.y < 0 or viewport_event_position.y > editor_viewport.get_height():
+                    break
+                if selected_object != None and editing: 
                     point_at_mouse = get_curve_point_at_point(viewport_event_position, selected_object)
                     if event.button == 1: 
                         selected_point = point_at_mouse
@@ -133,15 +161,17 @@ def main():
                 else:
                     #adding a new path when clicking somewhere with right button with no object selected
                     if event.button == 3:
+                        set_editing()
                         new_path = (Path(position=viewport_event_position))
-                        print(new_path.position)
                         selected_layer.add_object(new_path)
                         selected_object = new_path
                 if event.button == 1 and selected_point == None:
                     selected_object = get_object_at_point(viewport_event_position, selected_layer, selected_object)
-        if selected_point != None:
+                if selected_object != None and moving:
+                    move_object(selected_object, editor_viewport, viewport_x_offset, viewport_y_offset, pg.Vector2(pg.mouse.get_pos()))
+        if selected_point != None and editing:
             #moving a point to the mouse position
-            move_point(selected_point, selected_object, editor_viewport, viewport_x_offset, viewport_y_offset)
+            move_point(selected_point, selected_object, editor_viewport, viewport_x_offset, viewport_y_offset, pg.Vector2(pg.mouse.get_pos()))
 
         screen.fill(colors['background'])
         layer1.clear()
@@ -154,9 +184,12 @@ def main():
 
         editor_viewport.blit(layer1.surface, (0, 0))
         
-        if selected_object != None:
+        if selected_object != None and editing:
             selected_object.draw_controls(editor_viewport)
             #selected_object.draw_bounding_box(editor_viewport)
+        
+        if selected_object != None and moving:
+            selected_object.draw_bounding_box(editor_viewport)
             
         screen.blit(editor_viewport, (viewport_x_offset, viewport_y_offset))
         
