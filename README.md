@@ -1,17 +1,18 @@
-# SVG Creator - Creating Lines with Splines
+# Simple Python spline drawer
 
 [![Github Release](https://img.shields.io/github/v/release/iptpka/py_projekti?logo=github&style=for-the-badge&labelColor=333333)](https://github.com/iptpka/py_projekti/releases)
 
-**This SVG Creator / spline application is a project we decided to create for our OOP (Object Oriented Programming) 2023 course in Turku UAS.**
+**Created for Turku UAS OOP 2023.**
 
-* **Why splines?:** Because we both had an interest towards SVG creation and generation, and we wanted to see how difficult it would be to create your very own SVGs from scratch... Literally.
-* **Technologies:** The SVG Creator is made by using Python and the pygame library.
+
+* **Features:** Extremely rudimentary spline based line drawing. Support for multiple spline objects and clearing the workspace and not much else.
+* **Technologies:** Made with Python and pygame.
 
 ## Requirements
 [Python](https://www.python.org) v3.09 or greater
 
 ## Quick Start
-**Clone** the repository and run the project with your preferred IDE. (PyCharm, VSCode...)
+**Clone** the repository and run main.py
 ```bash
 $ gh repo clone iptpka/py_projekti
 ```
@@ -20,4 +21,4 @@ $ gh repo clone iptpka/py_projekti
 ![A class diagram drawn using diagrams.net](https://github.com/iptpka/py_projekti/blob/master/class_uml.png)
 
 ## License
-This repository is released under the [CC0 License](LICENSE)
+This repository is released under the [CC0 
